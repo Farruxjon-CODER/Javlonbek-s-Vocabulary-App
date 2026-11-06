@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import type { VocabularyWord } from '@/types'
 import { useProgressStore } from '@/stores/progress'
+import { useToastStore } from '@/stores/toast'
 import WordCard from '@/components/WordCard.vue'
 import WordDetailModal from '@/components/WordDetailModal.vue'
 import EmptyState from '@/components/EmptyState.vue'
@@ -22,6 +23,8 @@ const filteredFavorites = computed(() => {
   return favs.filter(w => w.word.toLowerCase().includes(q))
 })
 
+const toastStore = useToastStore()
+
 function selectWord(word: VocabularyWord) {
   selectedWord.value = word
   selectedIndex.value = filteredFavorites.value.findIndex(w => w.id === word.id)
@@ -40,8 +43,7 @@ function navigateWord(direction: 'prev' | 'next') {
 function clearAll() {
   if (confirm('Remove all favorites?')) {
     progressStore.favoriteWords.forEach(w => progressStore.toggleFavorite(w.id))
-    const toast = (window as any).__lexiflow_toast
-    if (toast) toast('All favorites cleared', 'info')
+    toastStore.addToast('All favorites cleared', 'info')
   }
 }
 </script>

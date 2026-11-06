@@ -34,5 +34,11 @@ declare module 'firebase/firestore' {
   export function doc(db: Firestore, path: string, ...pathSegments: string[]): any
   export function setDoc(docRef: any, data: any, options?: any): Promise<void>
   export function getDoc(docRef: any): Promise<any>
+  export function updateDoc(docRef: any, data: any): Promise<void>
+  export function collection(db: Firestore, path: string, ...pathSegments: string[]): any
+  export function query(collectionRef: any, ...queryConstraints: any[]): any
+  export function orderBy(fieldPath: string, directionStr?: 'asc' | 'desc'): any
+  export function limit(limitNumber: number): any
+  export function getDocs(query: any): Promise<any>
 }
 

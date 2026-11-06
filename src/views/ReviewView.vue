@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useProgressStore } from '@/stores/progress'
+import { useToastStore } from '@/stores/toast'
 import CEFRBadge from '@/components/CEFRBadge.vue'
 import POSBadge from '@/components/POSBadge.vue'
 import ProgressBar from '@/components/ProgressBar.vue'
@@ -8,6 +9,7 @@ import EmptyState from '@/components/EmptyState.vue'
 import { Brain, RotateCcw, Check, Zap, Inbox } from 'lucide-vue-next'
 
 const progressStore = useProgressStore()
+const toastStore = useToastStore()
 
 const isStarted = ref(false)
 const currentIndex = ref(0)
@@ -38,11 +40,8 @@ function respond(type: 'again' | 'hard' | 'good' | 'easy') {
   if (!currentWord.value) return
   progressStore.processReview(currentWord.value.id, { type })
 
-  const toast = (window as any).__lexiflow_toast
-  if (toast) {
-    const msgs = { again: 'Will review again soon', hard: 'Marked as hard', good: 'Good progress!', easy: 'Easy! 🎉' }
-    toast(msgs[type], type === 'easy' || type === 'good' ? 'success' : 'info')
-  }
+  const msgs = { again: 'Will review again soon', hard: 'Marked as hard', good: 'Good progress!', easy: 'Easy! 🎉' }
+  toastStore.addToast(msgs[type], type === 'easy' || type === 'good' ? 'success' : 'info')
 
   currentIndex.value++
   showAnswer.value = false

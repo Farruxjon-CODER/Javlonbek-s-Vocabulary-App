@@ -2,11 +2,13 @@
 import { ref } from 'vue'
 import { useWordsStore } from '@/stores/words'
 import { useSettingsStore } from '@/stores/settings'
+import { useToastStore } from '@/stores/toast'
 import { resetAppData } from '@/utils/resetApp'
 import { Sun, Moon, Monitor, Trash2, Info, AlertTriangle } from 'lucide-vue-next'
 
 const wordsStore = useWordsStore()
 const settingsStore = useSettingsStore()
+const toastStore = useToastStore()
 const showConfirmReset = ref(false)
 
 const themes = [
@@ -19,8 +21,7 @@ const goalOptions = [10, 20, 30, 50]
 
 function setTheme(theme: 'light' | 'dark' | 'system') {
   settingsStore.updateSettings({ theme })
-  const toast = (window as any).__lexiflow_toast
-  if (toast) toast(`Theme set to ${theme}`, 'info')
+  toastStore.addToast(`Theme set to ${theme}`, 'info')
 }
 
 function handleResetClick() {

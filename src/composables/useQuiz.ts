@@ -128,13 +128,12 @@ export function useQuiz() {
       correctIndex: q.correctIndex,
       isCorrect: index === q.correctIndex
     })
-
-    if (index === q.correctIndex) {
-      useGamificationStore().addCoins(10, "To'g'ri javob uchun +10 Coin!")
-    }
   }
 
   function nextQuestion() {
+    // Double-trigger (qayta-qayta bosib tanga olish) ning oldini olish
+    if (isQuizComplete.value) return
+
     if (currentIndex.value < questions.value.length - 1) {
       currentIndex.value++
       selectedAnswer.value = null
@@ -143,6 +142,14 @@ export function useQuiz() {
       isQuizComplete.value = true
       if (quizResult.value) {
         statsStore.addQuizResult(quizResult.value)
+        const correctAnswersCount = quizResult.value.correct
+        if (correctAnswersCount > 0) {
+          const gamificationStore = useGamificationStore()
+          gamificationStore.addCoins(
+            correctAnswersCount * 10,
+            'Testni muvaffaqiyatli yakunladingiz!'
+          )
+        }
       }
     }
   }

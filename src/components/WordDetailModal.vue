@@ -2,9 +2,11 @@
 import { computed } from 'vue'
 import type { VocabularyWord } from '@/types'
 import { useProgressStore } from '@/stores/progress'
+import { useToastStore } from '@/stores/toast'
+import { useSpeech } from '@/composables/useSpeech'
 import CEFRBadge from './CEFRBadge.vue'
 import POSBadge from './POSBadge.vue'
-import { X, Star, Check, BookOpen, ChevronLeft, ChevronRight, RotateCcw } from 'lucide-vue-next'
+import { X, Star, Check, BookOpen, ChevronLeft, ChevronRight, RotateCcw, Volume2 } from 'lucide-vue-next'
 
 const props = defineProps<{
   word: VocabularyWord
@@ -18,14 +20,14 @@ const emit = defineEmits<{
 }>()
 
 const progressStore = useProgressStore()
+const toastStore = useToastStore()
+const { speak, isSpeaking } = useSpeech()
 
 const status = computed(() => progressStore.getWordStatus(props.word.id))
 const isFav = computed(() => progressStore.isFavorite(props.word.id))
 
 function toast(msg: string, type: 'success' | 'info' = 'success') {
-  if (typeof window !== 'undefined' && (window as any).__lexiflow_toast) {
-    (window as any).__lexiflow_toast(msg, type)
-  }
+  toastStore.addToast(msg, type)
 }
 
 function handleLearn() {
@@ -72,7 +74,18 @@ function handleFavorite() {
 
       <!-- Content -->
       <div class="p-6">
-        <h2 class="text-3xl font-bold text-surface-900 dark:text-white mb-2">{{ word.word }}</h2>
+        <div class="flex items-center gap-3 mb-2">
+          <h2 class="text-3xl font-bold text-surface-900 dark:text-white">{{ word.word }}</h2>
+          <button
+            type="button"
+            @click="speak(word.word)"
+            class="p-2 rounded-xl bg-primary-50 hover:bg-primary-100 dark:bg-primary-500/10 dark:hover:bg-primary-500/20 text-primary-600 dark:text-primary-400 transition-colors cursor-pointer"
+            title="Pronunciation (Talaffuzni tinglash)"
+            aria-label="Listen pronunciation"
+          >
+            <Volume2 :size="20" :class="{ 'animate-pulse text-primary-700 dark:text-primary-300': isSpeaking }" />
+          </button>
+        </div>
 
         <!-- Status -->
         <div class="flex items-center gap-2 mb-6">

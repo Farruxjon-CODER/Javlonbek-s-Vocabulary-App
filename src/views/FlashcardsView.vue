@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useWordsStore } from '@/stores/words'
 import { useProgressStore } from '@/stores/progress'
+import { useToastStore } from '@/stores/toast'
 import { useFlashcards } from '@/composables/useFlashcards'
 import CEFRBadge from '@/components/CEFRBadge.vue'
 import POSBadge from '@/components/POSBadge.vue'
@@ -21,6 +22,7 @@ import {
 
 const wordsStore = useWordsStore()
 const progressStore = useProgressStore()
+const toastStore = useToastStore()
 const {
   session,
   currentWord,
@@ -57,10 +59,10 @@ function restart() {
 function handleFavorite() {
   if (currentWord.value) {
     progressStore.toggleFavorite(currentWord.value.id)
-    const toast = (window as any).__lexiflow_toast
-    if (toast) {
-      toast(progressStore.isFavorite(currentWord.value.id) ? '⭐ Added to favorites' : 'Removed from favorites', 'info')
-    }
+    toastStore.addToast(
+      progressStore.isFavorite(currentWord.value.id) ? '⭐ Added to favorites' : 'Removed from favorites',
+      'info'
+    )
   }
 }
 

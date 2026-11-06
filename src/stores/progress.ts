@@ -6,14 +6,37 @@ import { useWordsStore } from '@/stores/words'
 import { useStatsStore } from '@/stores/stats'
 import { useSettingsStore } from '@/stores/settings'
 import { useGamificationStore } from '@/stores/gamification'
+import { useAuthStore } from '@/stores/auth'
+import { saveUserData } from '@/firebase/userService'
 
 export const useProgressStore = defineStore('progress', () => {
   const progressMap = ref<Record<number, WordProgress>>(
     getItem(STORAGE_KEYS.PROGRESS, {})
   )
 
+  let syncTimer: any = null
+
+  function syncProgressToCloud() {
+    if (typeof window === 'undefined') return
+    clearTimeout(syncTimer)
+    syncTimer = setTimeout(() => {
+      const authStore = useAuthStore()
+      if (authStore.user?.uid) {
+        saveUserData(authStore.user.uid, { progress: progressMap.value })
+      }
+    }, 2000) // 2 soniya kuting (ortiqcha so'rov yubormaslik uchun)
+  }
+
   function saveProgress() {
     setItem(STORAGE_KEYS.PROGRESS, progressMap.value)
+    syncProgressToCloud()
+  }
+
+  function setProgressData(data: Record<number, WordProgress>) {
+    if (data && typeof data === 'object') {
+      progressMap.value = { ...progressMap.value, ...data }
+      setItem(STORAGE_KEYS.PROGRESS, progressMap.value)
+    }
   }
 
   function getProgress(wordId: number): WordProgress {
@@ -151,6 +174,7 @@ export const useProgressStore = defineStore('progress', () => {
   function processReview(wordId: number, action: ReviewAction) {
     const statsStore = useStatsStore()
     const p = getProgress(wordId)
+    const prevStatus = p.status
     const now = new Date()
     p.lastReviewed = now.toISOString().split('T')[0]
 
@@ -163,21 +187,29 @@ export const useProgressStore = defineStore('progress', () => {
         p.status = 'learning'
         break
       case 'hard':
-        newInterval = Math.max(1, p.interval)
+        newInterval = Math.max(1, Math.round((p.interval || 1) * 1.2))
         p.correct++
         p.status = 'learning'
         break
       case 'good':
         newInterval = Math.max(2, p.interval * 2)
         p.correct++
-        if (p.correct >= 5) p.status = 'mastered'
-        else p.status = 'learning'
+        // Agar so'z avvaldan 'mastered' bo'lsa, 'learning' ga qaytib ketmasligi uchun himoya
+        if (prevStatus === 'mastered' || p.correct >= 5) {
+          p.status = 'mastered'
+        } else {
+          p.status = 'learning'
+        }
         break
       case 'easy':
         newInterval = Math.max(4, Math.floor(p.interval * 2.5))
         p.correct++
-        if (p.correct >= 3) p.status = 'mastered'
-        else p.status = 'learning'
+        // Agar so'z avvaldan 'mastered' bo'lsa, 'learning' ga qaytib ketmasligi uchun himoya
+        if (prevStatus === 'mastered' || p.correct >= 3) {
+          p.status = 'mastered'
+        } else {
+          p.status = 'learning'
+        }
         break
     }
 
@@ -188,7 +220,17 @@ export const useProgressStore = defineStore('progress', () => {
 
     statsStore.incrementTodayReviewed()
     statsStore.updateStreak()
-    useGamificationStore().addCoins(15, "So'z mukammal o'zlashtirildi (+15 Coin)")
+
+    // Agar 'good' yoki 'easy' deb javob berilib, so'z 'mastered' ga o'tsa: +5 coin
+    if (
+      (action.type === 'good' || action.type === 'easy') &&
+      p.status === 'mastered' &&
+      prevStatus !== 'mastered'
+    ) {
+      const gamificationStore = useGamificationStore()
+      gamificationStore.addCoins(5, "Yangi so'z o'zlashtirildi!")
+    }
+
     saveProgress()
   }
 
@@ -221,6 +263,7 @@ export const useProgressStore = defineStore('progress', () => {
     toggleFavorite,
     processReview,
     saveProgress,
+    setProgressData,
     resetToInitial,
     resetAllData
   }

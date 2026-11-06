@@ -3,6 +3,8 @@ import { ref, computed } from 'vue'
 import type { DailyStats, QuizResult } from '@/types'
 import { getItem, setItem, STORAGE_KEYS } from '@/utils/storage'
 import { useSettingsStore } from '@/stores/settings'
+import { useAuthStore } from '@/stores/auth'
+import { saveUserData } from '@/firebase/userService'
 
 export const useStatsStore = defineStore('stats', () => {
   const dailyStatsHistory = ref<DailyStats[]>(
@@ -17,16 +19,50 @@ export const useStatsStore = defineStore('stats', () => {
     getItem(STORAGE_KEYS.STREAK, { current: 0, lastDate: '' })
   )
 
+  let syncTimer: any = null
+
+  function syncStatsToCloud() {
+    if (typeof window === 'undefined') return
+    clearTimeout(syncTimer)
+    syncTimer = setTimeout(() => {
+      const authStore = useAuthStore()
+      if (authStore.user?.uid) {
+        saveUserData(authStore.user.uid, {
+          stats: {
+            streak: streak.value,
+            dailyStatsHistory: dailyStatsHistory.value,
+            quizHistory: quizHistory.value
+          }
+        })
+      }
+    }, 2000) // 2 soniya debounce
+  }
+
   function saveDailyStats() {
     setItem(STORAGE_KEYS.DAILY_STATS, dailyStatsHistory.value)
+    syncStatsToCloud()
   }
 
   function saveQuizHistory() {
     setItem(STORAGE_KEYS.QUIZ_HISTORY, quizHistory.value)
+    syncStatsToCloud()
   }
 
   function saveStreak() {
     setItem(STORAGE_KEYS.STREAK, streak.value)
+    syncStatsToCloud()
+  }
+
+  function setStatsData(data: any) {
+    if (data && typeof data === 'object') {
+      if (data.streak) streak.value = data.streak
+      if (Array.isArray(data.dailyStatsHistory)) dailyStatsHistory.value = data.dailyStatsHistory
+      if (Array.isArray(data.quizHistory)) quizHistory.value = data.quizHistory
+
+      setItem(STORAGE_KEYS.STREAK, streak.value)
+      setItem(STORAGE_KEYS.DAILY_STATS, dailyStatsHistory.value)
+      setItem(STORAGE_KEYS.QUIZ_HISTORY, quizHistory.value)
+    }
   }
 
   function getTodayEntry(): DailyStats {
@@ -142,6 +178,7 @@ export const useStatsStore = defineStore('stats', () => {
     incrementTodayReviewed,
     addQuizResult,
     updateStreak,
+    setStatsData,
     resetToInitial,
     resetAll
   }

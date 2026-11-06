@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import apexchart from 'vue3-apexcharts'
 import { useWordsStore } from '@/stores/words'
 import { useProgressStore } from '@/stores/progress'
 import { useStatsStore } from '@/stores/stats'
 import { useSettingsStore } from '@/stores/settings'
 import StatCard from '@/components/StatCard.vue'
 import ProgressBar from '@/components/ProgressBar.vue'
-import CEFRBadge from '@/components/CEFRBadge.vue'
 import {
   BookOpen,
   GraduationCap,
@@ -39,34 +39,132 @@ const totalWordsLearned = computed(() => {
 
 const totalQuizzes = computed(() => statsStore.quizHistory.length)
 
-// CEFR Stacked Bar Chart Metrics
-const cefrChartData = computed(() => {
-  return ['A1', 'A2', 'B1', 'B2'].map(level => {
-    const data = progressStore.cefrDistribution[level] || { total: 0, learned: 0, mastered: 0 }
-    const total = data.total || 1
-    const mastered = data.mastered || 0
-    const learning = Math.max(0, (data.learned || 0) - mastered)
-    const newWords = Math.max(0, total - (mastered + learning))
+// ApexCharts Stacked Bar Series
+// Ranglar ketma-ketligi: Mastered (#22c55e), Learning (#eab308), New (#9ca3af)
+const chartSeries = computed(() => [
+  {
+    name: 'Mastered (O‘zlashtirilgan)',
+    data: ['A1', 'A2', 'B1', 'B2'].map(level => {
+      const data = progressStore.cefrDistribution[level]
+      return data?.mastered || 0
+    })
+  },
+  {
+    name: 'Learning (O‘rganilayotgan)',
+    data: ['A1', 'A2', 'B1', 'B2'].map(level => {
+      const data = progressStore.cefrDistribution[level]
+      const mastered = data?.mastered || 0
+      const learned = data?.learned || 0
+      return Math.max(0, learned - mastered)
+    })
+  },
+  {
+    name: 'New (Yangi so‘zlar)',
+    data: ['A1', 'A2', 'B1', 'B2'].map(level => {
+      const data = progressStore.cefrDistribution[level]
+      const total = data?.total || 0
+      const learned = data?.learned || 0
+      return Math.max(0, total - learned)
+    })
+  }
+])
 
-    return {
-      level,
-      total: data.total || 0,
-      mastered,
-      learning,
-      newWords,
-      masteredPct: Math.round((mastered / total) * 100),
-      learningPct: Math.round((learning / total) * 100),
-      newPct: Math.max(0, 100 - Math.round((mastered / total) * 100) - Math.round((learning / total) * 100))
+// ApexCharts Options (Stacked Bar Chart, qat'iy ranglar bilan)
+const chartOptions = computed(() => ({
+  chart: {
+    type: 'bar',
+    stacked: true,
+    toolbar: { show: false },
+    fontFamily: 'inherit',
+    background: 'transparent',
+    animations: {
+      enabled: true,
+      speed: 600
     }
-  })
-})
+  },
+  // Qat'iy talab qilingan ranglar: Yashil (#22c55e), Sariq (#eab308), Kulrang (#9ca3af)
+  colors: ['#22c55e', '#eab308', '#9ca3af'],
+  plotOptions: {
+    bar: {
+      horizontal: false,
+      borderRadius: 6,
+      columnWidth: '45%',
+      dataLabels: {
+        total: {
+          enabled: true,
+          style: {
+            fontSize: '11px',
+            fontWeight: 700,
+            color: settingsStore.isDarkMode ? '#e2e8f0' : '#1e293b'
+          }
+        }
+      }
+    }
+  },
+  dataLabels: {
+    enabled: false
+  },
+  stroke: {
+    width: 1,
+    colors: [settingsStore.isDarkMode ? '#0f172a' : '#ffffff']
+  },
+  xaxis: {
+    categories: ['A1', 'A2', 'B1', 'B2'],
+    labels: {
+      style: {
+        colors: settingsStore.isDarkMode ? '#94a3b8' : '#64748b',
+        fontSize: '12px',
+        fontWeight: 700
+      }
+    },
+    axisBorder: { show: false },
+    axisTicks: { show: false }
+  },
+  yaxis: {
+    title: {
+      text: "So'zlar soni",
+      style: {
+        color: settingsStore.isDarkMode ? '#94a3b8' : '#64748b',
+        fontSize: '11px',
+        fontWeight: 500
+      }
+    },
+    labels: {
+      style: {
+        colors: settingsStore.isDarkMode ? '#94a3b8' : '#64748b',
+        fontSize: '11px'
+      }
+    }
+  },
+  grid: {
+    borderColor: settingsStore.isDarkMode ? '#334155' : '#f1f5f9',
+    strokeDashArray: 4
+  },
+  legend: {
+    position: 'top',
+    horizontalAlign: 'right',
+    fontSize: '12px',
+    labels: {
+      colors: settingsStore.isDarkMode ? '#cbd5e1' : '#475569'
+    },
+    markers: {
+      radius: 12
+    }
+  },
+  tooltip: {
+    theme: settingsStore.isDarkMode ? 'dark' : 'light',
+    y: {
+      formatter: (val: number) => `${val} ta so‘z`
+    }
+  }
+}))
 </script>
 
 <template>
   <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <div class="mb-8">
       <h1 class="text-2xl font-bold text-surface-900 dark:text-white mb-1">Progress</h1>
-      <p class="text-sm text-surface-500">Track your learning journey</p>
+      <p class="text-sm text-surface-500">O‘rganish natijalari va darajangiz statistikasi</p>
     </div>
 
     <!-- Overview Stats -->
@@ -103,13 +201,13 @@ const cefrChartData = computed(() => {
     <div class="bg-white dark:bg-surface-900 rounded-2xl p-6 border border-surface-200 dark:border-surface-800 mb-8">
       <h3 class="font-semibold text-surface-900 dark:text-white mb-5 flex items-center gap-2">
         <TrendingUp :size="18" class="text-primary-500" />
-        Overall Progress
+        Umumiy O‘zlashtirish Progressi
       </h3>
 
       <div class="space-y-4">
         <div>
           <div class="flex justify-between mb-1.5">
-            <span class="text-sm text-surface-600 dark:text-surface-400">Words Learned</span>
+            <span class="text-sm text-surface-600 dark:text-surface-400">O‘rganilgan so‘zlar</span>
             <span class="text-sm font-medium text-surface-900 dark:text-white">{{ progressStore.learnedWords.length }} / {{ wordsStore.totalWords }}</span>
           </div>
           <ProgressBar :value="progressStore.learnedWords.length" :max="wordsStore.totalWords" color="bg-amber-500" size="md" />
@@ -117,7 +215,7 @@ const cefrChartData = computed(() => {
 
         <div>
           <div class="flex justify-between mb-1.5">
-            <span class="text-sm text-surface-600 dark:text-surface-400">Words Mastered</span>
+            <span class="text-sm text-surface-600 dark:text-surface-400">To‘liq o‘zlashtirilgan (Mastered)</span>
             <span class="text-sm font-medium text-surface-900 dark:text-white">{{ progressStore.masteredWords.length }} / {{ wordsStore.totalWords }}</span>
           </div>
           <ProgressBar :value="progressStore.masteredWords.length" :max="wordsStore.totalWords" color="bg-emerald-500" size="md" />
@@ -125,110 +223,79 @@ const cefrChartData = computed(() => {
       </div>
     </div>
 
-    <!-- Two Column Layout -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-      <!-- CEFR Stacked Bar Chart -->
-      <div class="bg-white dark:bg-surface-900 rounded-3xl p-6 border border-surface-200 dark:border-surface-800 shadow-sm">
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6">
-          <h3 class="font-bold text-base text-surface-900 dark:text-white flex items-center gap-2">
-            <BarChart3 :size="18" class="text-primary-600 dark:text-primary-400" />
-            CEFR Stacked Bar Chart
-          </h3>
+    <!-- Two Column Layout: CEFR Stacked Bar Chart & Quick Stats -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+      <!-- CEFR Stacked Bar Chart Box -->
+      <div class="bg-white dark:bg-surface-900 rounded-3xl p-6 border border-surface-200 dark:border-surface-800 shadow-sm flex flex-col justify-between">
+        <div>
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6">
+            <h3 class="font-bold text-base text-surface-900 dark:text-white flex items-center gap-2">
+              <BarChart3 :size="18" class="text-primary-600 dark:text-primary-400" />
+              CEFR Progress (Stacked Bar Chart)
+            </h3>
 
-          <!-- Strict Color Legend -->
-          <div class="flex items-center gap-3 text-xs">
-            <div class="flex items-center gap-1.5">
-              <span class="w-3 h-3 rounded-full bg-[#22c55e]"></span>
-              <span class="text-surface-600 dark:text-surface-400 font-medium">Mastered</span>
+            <!-- Ranglar tushuntirishi (Legend) -->
+            <div class="flex items-center gap-3 text-xs">
+              <div class="flex items-center gap-1.5">
+                <span class="w-3 h-3 rounded-full bg-[#22c55e]"></span>
+                <span class="text-surface-600 dark:text-surface-400 font-medium">Mastered</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span class="w-3 h-3 rounded-full bg-[#eab308]"></span>
+                <span class="text-surface-600 dark:text-surface-400 font-medium">Learning</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span class="w-3 h-3 rounded-full bg-[#9ca3af]"></span>
+                <span class="text-surface-600 dark:text-surface-400 font-medium">New</span>
+              </div>
             </div>
-            <div class="flex items-center gap-1.5">
-              <span class="w-3 h-3 rounded-full bg-[#eab308]"></span>
-              <span class="text-surface-600 dark:text-surface-400 font-medium">Learning</span>
-            </div>
-            <div class="flex items-center gap-1.5">
-              <span class="w-3 h-3 rounded-full bg-[#9ca3af]"></span>
-              <span class="text-surface-600 dark:text-surface-400 font-medium">New</span>
-            </div>
+          </div>
+
+          <!-- ApexCharts Komponenti -->
+          <div class="w-full min-h-[320px]">
+            <apexchart
+              type="bar"
+              height="320"
+              :options="chartOptions"
+              :series="chartSeries"
+            />
           </div>
         </div>
 
-        <!-- Stacked Bars per Level -->
-        <div class="space-y-5">
-          <div v-for="item in cefrChartData" :key="item.level" class="group">
-            <div class="flex items-center justify-between mb-2">
-              <div class="flex items-center gap-2">
-                <CEFRBadge :level="item.level" />
-                <span class="text-xs font-semibold text-surface-700 dark:text-surface-300">
-                  {{ item.level }} Darajasi
-                </span>
-              </div>
-              <div class="text-xs text-surface-400 tabular-nums">
-                <span class="text-emerald-600 dark:text-emerald-400 font-medium">{{ item.mastered }}M</span> •
-                <span class="text-amber-600 dark:text-amber-400 font-medium">{{ item.learning }}L</span> •
-                <span class="text-surface-400">{{ item.newWords }}N</span>
-                <span class="ml-1 text-surface-500 font-semibold">({{ item.total }} ta)</span>
-              </div>
-            </div>
-
-            <!-- Stacked Bar Track -->
-            <div class="w-full h-4 rounded-full overflow-hidden flex bg-surface-100 dark:bg-surface-800 p-0.5 gap-0.5 border border-surface-200 dark:border-surface-700/60 shadow-inner">
-              <!-- Mastered Segment (Green #22c55e) -->
-              <div
-                v-if="item.mastered > 0"
-                class="h-full rounded-sm bg-[#22c55e] transition-all duration-500 relative group/seg cursor-pointer"
-                :style="{ width: `${item.masteredPct}%` }"
-                :title="`Mastered: ${item.mastered} ta (${item.masteredPct}%)`"
-              ></div>
-
-              <!-- Learning Segment (Yellow #eab308) -->
-              <div
-                v-if="item.learning > 0"
-                class="h-full rounded-sm bg-[#eab308] transition-all duration-500 relative group/seg cursor-pointer"
-                :style="{ width: `${item.learningPct}%` }"
-                :title="`Learning: ${item.learning} ta (${item.learningPct}%)`"
-              ></div>
-
-              <!-- New Words Segment (Gray #9ca3af) -->
-              <div
-                v-if="item.newWords > 0"
-                class="h-full rounded-sm bg-[#9ca3af] transition-all duration-500 relative group/seg cursor-pointer"
-                :style="{ width: `${item.newPct}%` }"
-                :title="`New: ${item.newWords} ta (${item.newPct}%)`"
-              ></div>
-            </div>
-          </div>
-        </div>
+        <p class="text-xs text-surface-400 mt-4 text-center">
+          X o‘qi: A1, A2, B1, B2 darajalari • Y o‘qi: Har bir darajadagi so‘zlar soni
+        </p>
       </div>
 
-      <!-- Quick Stats -->
-      <div class="bg-white dark:bg-surface-900 rounded-2xl p-6 border border-surface-200 dark:border-surface-800">
+      <!-- Learning Stats -->
+      <div class="bg-white dark:bg-surface-900 rounded-3xl p-6 border border-surface-200 dark:border-surface-800 shadow-sm">
         <h3 class="font-semibold text-surface-900 dark:text-white mb-5 flex items-center gap-2">
           <Target :size="18" class="text-primary-500" />
-          Learning Stats
+          O‘rganish Ko‘rsatkichlari
         </h3>
 
         <div class="space-y-4">
           <div class="flex items-center justify-between py-3 border-b border-surface-100 dark:border-surface-800">
-            <span class="text-sm text-surface-600 dark:text-surface-400">Current Streak</span>
+            <span class="text-sm text-surface-600 dark:text-surface-400">Joriy Streak</span>
             <span class="font-semibold text-surface-900 dark:text-white flex items-center gap-1">
               <Flame :size="16" class="text-orange-500" />
-              {{ statsStore.streak.current }} {{ statsStore.streak.current === 1 ? 'day' : 'days' }}
+              {{ statsStore.streak.current }} {{ statsStore.streak.current === 1 ? 'kun' : 'kun' }}
             </span>
           </div>
           <div class="flex items-center justify-between py-3 border-b border-surface-100 dark:border-surface-800">
-            <span class="text-sm text-surface-600 dark:text-surface-400">Total Words Reviewed</span>
+            <span class="text-sm text-surface-600 dark:text-surface-400">Takrorlangan so‘zlar</span>
             <span class="font-semibold text-surface-900 dark:text-white">{{ totalWordsLearned }}</span>
           </div>
           <div class="flex items-center justify-between py-3 border-b border-surface-100 dark:border-surface-800">
-            <span class="text-sm text-surface-600 dark:text-surface-400">Quizzes Taken</span>
+            <span class="text-sm text-surface-600 dark:text-surface-400">Yechilgan testlar</span>
             <span class="font-semibold text-surface-900 dark:text-white">{{ totalQuizzes }}</span>
           </div>
           <div class="flex items-center justify-between py-3 border-b border-surface-100 dark:border-surface-800">
-            <span class="text-sm text-surface-600 dark:text-surface-400">Quiz Accuracy</span>
+            <span class="text-sm text-surface-600 dark:text-surface-400">Test aniqligi</span>
             <span class="font-semibold text-surface-900 dark:text-white">{{ statsStore.totalQuizAccuracy }}%</span>
           </div>
           <div class="flex items-center justify-between py-3">
-            <span class="text-sm text-surface-600 dark:text-surface-400">Favorites</span>
+            <span class="text-sm text-surface-600 dark:text-surface-400">Sevimlilar soni</span>
             <span class="font-semibold text-surface-900 dark:text-white">{{ progressStore.favoriteWords.length }}</span>
           </div>
         </div>
@@ -237,7 +304,7 @@ const cefrChartData = computed(() => {
 
     <!-- Weekly Activity -->
     <div class="bg-white dark:bg-surface-900 rounded-2xl p-6 border border-surface-200 dark:border-surface-800">
-      <h3 class="font-semibold text-surface-900 dark:text-white mb-5">Weekly Activity</h3>
+      <h3 class="font-semibold text-primary-600 dark:text-primary-400 mb-5">Haftalik Faollik (Weekly Activity)</h3>
 
       <div class="flex items-end justify-between gap-2 h-32">
         <div
@@ -250,7 +317,7 @@ const cefrChartData = computed(() => {
             <div
               class="w-full max-w-[32px] rounded-t-lg transition-all duration-300"
               :class="day.wordsLearned > 0 ? 'bg-primary-500' : 'bg-surface-200 dark:bg-surface-800'"
-              :style="{ height: `${Math.max(day.wordsLearned > 0 ? 16 : 4, Math.min((day.wordsLearned / Math.max(settingsStore.settings.dailyGoal, 1)) * 80, 80))}px` }"
+              :style="{ height: `${Math.max(day.wordsLearned > 0 ? 16 : 4, Math.min((day.wordsLearned / 20) * 80, 80))}px` }"
             />
           </div>
           <span class="text-xs text-surface-400">{{ day.label }}</span>

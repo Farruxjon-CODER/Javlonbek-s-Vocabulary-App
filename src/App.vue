@@ -11,15 +11,19 @@ import MobileNav from '@/components/MobileNav.vue'
 import CommandPalette from '@/components/CommandPalette.vue'
 import ToastContainer from '@/components/ToastContainer.vue'
 import { useKeyboardShortcuts } from '@/composables/useKeyboardShortcuts'
-import { Search, Sun, Moon, Settings } from 'lucide-vue-next'
+import { Search, Sun, Moon, Settings, Menu } from 'lucide-vue-next'
 
 const route = useRoute()
 const wordsStore = useWordsStore()
 const settingsStore = useSettingsStore()
-const { isSidebarOpen } = useSidebar()
+const { isSidebarOpen, toggleMobile, closeMobile } = useSidebar()
 const authStore = useAuthStore()
 const gamificationStore = useGamificationStore()
 const showCommandPalette = ref(false)
+
+watch(() => route.path, () => {
+  closeMobile()
+})
 
 function applyTheme(theme: 'light' | 'dark' | 'system') {
   const root = document.documentElement
@@ -43,6 +47,7 @@ let mediaQuery: MediaQueryList | null = null
 let mediaListener: ((e: MediaQueryListEvent) => void) | null = null
 
 onMounted(() => {
+  authStore.initAuth()
   wordsStore.loadVocabulary()
   applyTheme(settingsStore.settings.theme)
 
@@ -84,24 +89,37 @@ useKeyboardShortcuts([
 
 <template>
   <div class="min-h-screen bg-surface-50 dark:bg-surface-950 text-surface-900 dark:text-surface-100 transition-colors duration-200">
-    <!-- Desktop Sidebar -->
-    <AppSidebar v-if="route.name !== 'login'" class="hidden lg:flex" />
+    <!-- Sidebar (Desktop Fixed & Mobile Drawer) -->
+    <AppSidebar v-if="route.name !== 'login'" />
 
     <!-- Mobile Top Header Bar -->
-    <header v-if="route.name !== 'login'" class="lg:hidden sticky top-0 z-30 bg-white/90 dark:bg-surface-900/90 backdrop-blur-md border-b border-surface-200 dark:border-surface-800 px-4 py-2.5 flex items-center justify-between transition-colors">
-      <router-link to="/" class="flex items-center gap-2.5">
-        <div class="w-8 h-8 bg-white dark:bg-surface-800 rounded-lg shadow-sm border border-surface-200 dark:border-surface-700 overflow-hidden flex items-center justify-center shrink-0">
-          <img
-            src="/LC logo_2.jpg"
-            alt="Javlonbek's LC Logo"
-            class="w-full h-full object-cover scale-110"
-          />
-        </div>
-        <div>
-          <span class="font-bold text-sm text-surface-900 dark:text-white leading-tight block">Javlonbek's LC</span>
-          <span class="text-[10px] text-surface-400 font-medium tracking-wider uppercase block">Oxford 5000 IELTS</span>
-        </div>
-      </router-link>
+    <header v-if="route.name !== 'login'" class="lg:hidden sticky top-0 z-30 bg-white/90 dark:bg-surface-900/90 backdrop-blur-md border-b border-surface-200 dark:border-surface-800 px-3 sm:px-4 py-2.5 flex items-center justify-between transition-colors">
+      <div class="flex items-center gap-2 min-w-0">
+        <!-- Hamburger Menu Button (Mobile) -->
+        <button
+          type="button"
+          @click="toggleMobile"
+          class="p-2 -ml-1 rounded-xl text-surface-600 dark:text-surface-300 hover:bg-surface-100 dark:hover:bg-surface-800 transition-colors cursor-pointer"
+          title="Menyu"
+          aria-label="Toggle mobile menu"
+        >
+          <Menu :size="20" />
+        </button>
+
+        <router-link to="/" class="flex items-center gap-2 min-w-0">
+          <div class="w-8 h-8 bg-white dark:bg-surface-800 rounded-lg shadow-sm border border-surface-200 dark:border-surface-700 overflow-hidden flex items-center justify-center shrink-0">
+            <img
+              src="/LC logo_2.jpg"
+              alt="Javlonbek's LC Logo"
+              class="w-full h-full object-cover scale-110"
+            />
+          </div>
+          <div class="min-w-0">
+            <span class="font-bold text-xs sm:text-sm text-surface-900 dark:text-white leading-tight block truncate">Javlonbek's LC</span>
+            <span class="text-[9px] sm:text-[10px] text-surface-400 font-medium tracking-wider uppercase block truncate">Oxford 5000</span>
+          </div>
+        </router-link>
+      </div>
 
       <div class="flex items-center gap-2">
         <!-- Coin Badge -->

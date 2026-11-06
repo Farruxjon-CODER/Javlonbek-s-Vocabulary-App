@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { VocabularyWord } from '@/types'
 import { useProgressStore } from '@/stores/progress'
+import { useToastStore } from '@/stores/toast'
 import CEFRBadge from './CEFRBadge.vue'
 import POSBadge from './POSBadge.vue'
 import { Star, Check, BookOpen } from 'lucide-vue-next'
@@ -14,11 +15,10 @@ const emit = defineEmits<{
 }>()
 
 const progressStore = useProgressStore()
+const toastStore = useToastStore()
 
 function toast(msg: string, type: 'success' | 'info' = 'success') {
-  if (typeof window !== 'undefined' && (window as any).__lexiflow_toast) {
-    (window as any).__lexiflow_toast(msg, type)
-  }
+  toastStore.addToast(msg, type)
 }
 
 function handleFavorite(e: Event) {

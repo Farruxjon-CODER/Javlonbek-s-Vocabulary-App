@@ -1,87 +1,99 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { Sparkles, CheckCircle2, ShieldCheck, ArrowRight, Loader2 } from 'lucide-vue-next'
 
 const router = useRouter()
-const route = useRoute()
 const authStore = useAuthStore()
 const isLoggingIn = ref(false)
+const errorMessage = ref<string | null>(null)
 
 async function handleGoogleLogin() {
   isLoggingIn.value = true
-  const success = await authStore.loginWithGoogle()
-  isLoggingIn.value = false
+  errorMessage.value = null
 
-  if (success) {
-    const redirectPath = (route.query.redirect as string) || '/'
-    router.replace(redirectPath)
+  try {
+    const success = await authStore.loginWithGoogle()
+    if (success) {
+      router.push('/')
+    } else {
+      errorMessage.value = 'Google orqali kirishda xatolik yuz berdi. Qayta urinib ko‘ring.'
+    }
+  } catch (err: any) {
+    errorMessage.value = err?.message || 'Kutilmagan xatolik yuz berdi.'
+  } finally {
+    isLoggingIn.value = false
   }
 }
 </script>
 
 <template>
-  <div class="min-h-screen bg-surface-50 dark:bg-surface-950 flex flex-col justify-center items-center px-4 py-12 relative overflow-hidden select-none">
-    <!-- Ambient Background Gradients -->
-    <div class="absolute -top-32 -left-32 w-96 h-96 bg-primary-600/15 dark:bg-primary-600/25 rounded-full blur-3xl pointer-events-none" />
-    <div class="absolute -bottom-32 -right-32 w-96 h-96 bg-primary-800/15 dark:bg-primary-500/20 rounded-full blur-3xl pointer-events-none" />
+  <div class="min-h-screen bg-gradient-to-br from-primary-950 via-surface-950 to-primary-900 flex flex-col justify-center items-center px-4 py-12 relative overflow-hidden select-none">
+    <!-- Ambient Blur Background Elements -->
+    <div class="absolute -top-32 -left-32 w-96 h-96 bg-primary-600/25 rounded-full blur-3xl pointer-events-none" />
+    <div class="absolute -bottom-32 -right-32 w-96 h-96 bg-primary-500/20 rounded-full blur-3xl pointer-events-none" />
+    <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary-700/10 rounded-full blur-3xl pointer-events-none" />
 
+    <!-- Main Container -->
     <div class="w-full max-w-md relative z-10">
-      <!-- Main Brand Card -->
-      <div class="bg-white dark:bg-surface-900 border border-surface-200 dark:border-surface-800 rounded-3xl p-8 sm:p-10 shadow-2xl shadow-primary-900/10 dark:shadow-black/40">
+      <!-- Card -->
+      <div class="bg-white dark:bg-surface-900 border border-surface-200 dark:border-surface-800 rounded-3xl p-8 sm:p-10 shadow-2xl shadow-black/40 backdrop-blur-xl">
         <!-- Logo and App Title -->
         <div class="flex flex-col items-center text-center mb-8">
-          <div class="w-16 h-16 bg-white dark:bg-surface-800 rounded-2xl shadow-md border border-surface-200 dark:border-surface-700 overflow-hidden flex items-center justify-center mb-4">
+          <div class="w-20 h-20 bg-white dark:bg-surface-800 rounded-2xl shadow-lg border border-surface-200 dark:border-surface-700 overflow-hidden flex items-center justify-center mb-5 p-1">
             <img
               src="/LC logo_2.jpg"
               alt="Javlonbek's LC Logo"
-              class="w-full h-full object-cover scale-110"
+              class="w-full h-full object-cover rounded-xl"
             />
           </div>
 
-          <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-400 text-xs font-semibold uppercase tracking-wider mb-2">
+          <div class="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-primary-50 dark:bg-primary-500/10 text-primary-600 dark:text-primary-400 text-xs font-semibold uppercase tracking-wider mb-3">
             <Sparkles :size="14" />
-            <span>IELTS & Oxford 3000 SaaS</span>
+            <span>IELTS & Oxford 3000 Platform</span>
           </div>
 
           <h1 class="text-2xl sm:text-3xl font-extrabold text-surface-900 dark:text-white tracking-tight">
-            Javlonbek's LC
+            Welcome to Javlonbek's LC
           </h1>
-          <p class="text-sm text-surface-500 dark:text-surface-400 mt-1 max-w-xs">
-            Har kuni bir so‘z, IELTS va maqsadlaringiz sari qo‘yilgan bir qadam.
+          <p class="text-sm text-surface-500 dark:text-surface-400 mt-2 max-w-xs leading-relaxed">
+            Lug‘at boyligingizni oshiring, so‘zlarni esda saqlang va IELTS maqsadlaringiz sari ildamlang.
           </p>
         </div>
 
-        <!-- Features summary -->
+        <!-- Key Features List -->
         <div class="space-y-2.5 mb-8 bg-surface-50 dark:bg-surface-800/50 p-4 rounded-2xl border border-surface-100 dark:border-surface-800">
-          <div class="flex items-center gap-2.5 text-xs text-surface-700 dark:text-surface-300">
+          <div class="flex items-center gap-2.5 text-xs font-medium text-surface-700 dark:text-surface-300">
             <CheckCircle2 :size="16" class="text-emerald-500 shrink-0" />
             <span>3,000+ Saralangan Oxford va IELTS so‘zlari</span>
           </div>
-          <div class="flex items-center gap-2.5 text-xs text-surface-700 dark:text-surface-300">
+          <div class="flex items-center gap-2.5 text-xs font-medium text-surface-700 dark:text-surface-300">
             <CheckCircle2 :size="16" class="text-emerald-500 shrink-0" />
-            <span>100% Rasmiy Cambridge Dictionary ta’riflari</span>
+            <span>Spaced Repetition & Interaktiv Flashcards</span>
           </div>
-          <div class="flex items-center gap-2.5 text-xs text-surface-700 dark:text-surface-300">
+          <div class="flex items-center gap-2.5 text-xs font-medium text-surface-700 dark:text-surface-300">
             <CheckCircle2 :size="16" class="text-emerald-500 shrink-0" />
-            <span>Spaced Repetition & Gamified Coin reytingi</span>
+            <span>Real-time reyting va Gamification tizimi</span>
           </div>
         </div>
 
-        <!-- Error Alert -->
-        <div v-if="authStore.error" class="mb-6 p-3.5 rounded-xl bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-800 text-rose-600 dark:text-rose-400 text-xs text-center font-medium">
-          {{ authStore.error }}
+        <!-- Error Notification -->
+        <div
+          v-if="errorMessage"
+          class="mb-6 p-3.5 rounded-xl bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-800 text-rose-600 dark:text-rose-400 text-xs text-center font-medium"
+        >
+          {{ errorMessage }}
         </div>
 
-        <!-- Google Sign-In Button -->
+        <!-- Large "Continue with Google" Button -->
         <button
           type="button"
           @click="handleGoogleLogin"
           :disabled="isLoggingIn"
-          class="w-full h-13 flex items-center justify-center gap-3.5 px-6 py-3.5 rounded-2xl bg-white hover:bg-surface-50 dark:bg-surface-800 dark:hover:bg-surface-700/80 text-surface-800 dark:text-white font-semibold border border-surface-300 dark:border-surface-700 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer group disabled:opacity-60 disabled:cursor-not-allowed"
+          class="w-full h-14 flex items-center justify-center gap-3.5 px-6 rounded-2xl bg-white hover:bg-surface-50 dark:bg-surface-800 dark:hover:bg-surface-700/80 text-surface-900 dark:text-white font-semibold border border-surface-300 dark:border-surface-700 shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer group disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          <!-- Google "G" Colorful SVG Icon -->
+          <!-- Official Google "G" SVG Icon -->
           <svg v-if="!isLoggingIn" class="w-5 h-5 shrink-0" viewBox="0 0 24 24">
             <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
             <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
@@ -90,20 +102,23 @@ async function handleGoogleLogin() {
           </svg>
           <Loader2 v-else class="w-5 h-5 animate-spin text-primary-600 dark:text-primary-400" />
 
-          <span class="text-sm">
+          <span class="text-base font-semibold">
             {{ isLoggingIn ? 'Kirilmoqda...' : 'Continue with Google' }}
           </span>
 
-          <ArrowRight v-if="!isLoggingIn" :size="16" class="text-surface-400 group-hover:translate-x-1 transition-transform" />
+          <ArrowRight
+            v-if="!isLoggingIn"
+            :size="18"
+            class="text-surface-400 group-hover:translate-x-1 transition-transform ml-auto"
+          />
         </button>
 
         <!-- Secure Footer info -->
-        <div class="mt-8 pt-6 border-t border-surface-100 dark:border-surface-800 flex items-center justify-center gap-2 text-xs text-surface-400">
+        <div class="mt-8 pt-6 border-t border-surface-100 dark:border-surface-800 flex items-center justify-center gap-2 text-xs text-surface-500 dark:text-surface-400">
           <ShieldCheck :size="16" class="text-emerald-500" />
-          <span>Xavfsiz va tezkor Google OAuth 2.0</span>
+          <span>Google OAuth 2.0 orqali xavfsiz himoyalangan</span>
         </div>
       </div>
     </div>
   </div>
 </template>
-

@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -60,17 +61,25 @@ const router = createRouter({
 })
 
 // Global Navigation Guard for Authentication
-router.beforeEach((to, _from, next) => {
-  const cachedUser = typeof window !== 'undefined' ? localStorage.getItem('javlonbek_lc_auth_user') : null
-  const isAuthenticated = Boolean(cachedUser)
+router.beforeEach(async (to, _from, next) => {
+  const authStore = useAuthStore()
 
-  if (!to.meta.public && !isAuthenticated) {
-    next({ name: 'login', query: { redirect: to.fullPath } })
-  } else if (to.name === 'login' && isAuthenticated) {
-    next({ name: 'dashboard' })
-  } else {
-    next()
+  // Agar Firebase auth hali tekshirilayotgan bo'lsa, kutamiz
+  if (authStore.loading) {
+    await authStore.initAuth()
   }
+
+  // Agar sahifa /login bo'lmasa va foydalanuvchi tizimga kirmagan bo'lsa
+  if (to.path !== '/login' && !authStore.isAuthenticated) {
+    return next('/login')
+  }
+
+  // Agar tizimga kirgan foydalanuvchi /login sahifasiga bormoqchi bo'lsa
+  if (to.path === '/login' && authStore.isAuthenticated) {
+    return next('/')
+  }
+
+  return next()
 })
 
 export default router
